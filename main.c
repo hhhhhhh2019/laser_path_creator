@@ -28,6 +28,7 @@ void parse_node(xmlNode*);
 void parse_rect(xmlNode*);
 void parse_circle(xmlNode*);
 void parse_polygon(xmlNode*);
+void parse_polyline(xmlNode*);
 void parse_path(xmlNode*);
 
 void line(int,int,int,int);
@@ -149,6 +150,8 @@ void parse_node(xmlNode* root) {
 			parse_polygon(node);
 		else if (strcmp(node->name, "path") == 0)
 			parse_path(node);
+		else if (strcmp(node->name, "polyline") == 0)
+			parse_polyline(node);
 		else
 			printf("Unknown tag: %s\n", node->name);
 
@@ -365,18 +368,20 @@ void parse_polygon(xmlNode* node) {
 			str[0] = 0;
 
 			while (1) {
-				if (*points_str == ' ' || *points_str == 0) {
-					points = realloc(points, (++points_count) * sizeof(int));
-					points[points_count-1] = atoi(str) * scale;
-
-					free(str);
-					str = malloc(1);
-					str[0] = 0;
-				} else {
+				if (('0' <= *points_str && *points_str <= '9') || *points_str == '.' || *points_str == '-') {
 					int len = strlen(str);
 					str = realloc(str, len+2);
 					str[len] = *points_str;
 					str[len+1] = 0;
+				} else {
+					if (strlen(str) > 0) {
+						points = realloc(points, (++points_count) * sizeof(int));
+						points[points_count-1] = atoi(str) * scale;
+
+						free(str);
+						str = malloc(1);
+						str[0] = 0;
+					}
 				}
 
 				if (*points_str == 0)
@@ -389,13 +394,62 @@ void parse_polygon(xmlNode* node) {
 		}
 	}
 
-
-
 	for (int i = 0; i < points_count - 2; i+=2) {
 		line(points[i + 0], points[i + 1], points[i + 2], points[i + 3]);
 	}
 
 	line(points[points_count - 2], points[points_count - 1], points[0], points[1]);
+
+
+	switch_laser();
+	switch_laser();
+
+	free(points);
+}
+
+
+void parse_polyline(xmlNode* node) {
+	int* points = malloc(0);
+	int points_count = 0;
+
+	xmlAttr* prop = node->properties;
+
+	for (; prop; prop = prop->next) {
+		if (strcmp(prop->name, "points") == 0) {
+			char* points_str = prop->children->content;
+			char* str = malloc(1);
+			str[0] = 0;
+
+			while (1) {
+				if (('0' <= *points_str && *points_str <= '9') || *points_str == '.' || *points_str == '-') {
+					int len = strlen(str);
+					str = realloc(str, len+2);
+					str[len] = *points_str;
+					str[len+1] = 0;
+				} else {
+					if (strlen(str) > 0) {
+						points = realloc(points, (++points_count) * sizeof(int));
+						points[points_count-1] = atoi(str) * scale;
+
+						free(str);
+						str = malloc(1);
+						str[0] = 0;
+					}
+				}
+
+				if (*points_str == 0)
+					break;
+
+				points_str++;
+			}
+
+			free(str);
+		}
+	}
+
+	for (int i = 0; i < points_count-2; i+=2) {
+		line(points[i + 0], points[i + 1], points[i + 2], points[i + 3]);
+	}
 
 
 	switch_laser();
@@ -468,13 +522,10 @@ void parse_path(xmlNode* node) {
 	int sx = 0;
 	int sy = 0;
 
-	printf("%d %d\n", cmds_count, data_size);
-
+	char last_cmd = 0;
 
 	for (int i = 0; i < cmds_count; i+=2) {
-		putc(cmds[i], stdout);
-
-		if (cmds[i] == 'M') {
+		if (cmds[i] == 'M' && last_cmd != 'M') {
 			x = data[di++];
 			y = data[di++];
 			sx = x;
@@ -484,7 +535,7 @@ void parse_path(xmlNode* node) {
 			y += data[di++];
 			sx = x;
 			sy = y;
-		} else if (cmds[i] == 'L') {
+		} else if (cmds[i] == 'L' || (cmds[i] == 'M' && last_cmd == 'M')) {
 			int x1 = data[di++];
 			int y1 = data[di++];
 			line(x,y, x1,y1);
@@ -501,6 +552,8 @@ void parse_path(xmlNode* node) {
 			x = sx;
 			y = sy;
 		}
+
+		last_cmd = cmds[i];
 	}
 
 
