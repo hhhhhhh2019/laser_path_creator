@@ -31,7 +31,7 @@ void parse_polygon(xmlNode*);
 void parse_polyline(xmlNode*);
 void parse_path(xmlNode*);
 
-void line(int,int,int,int);
+void line(float,float,float,float);
 
 
 int main(int argc, char** argv) {
@@ -98,20 +98,20 @@ void switch_laser() {
 }
 
 
-void line(int x1, int y1, int x2, int y2) {
-	int dx = abs(x2 - x1);
-	int sx = x1 < x2 ? 1 : -1;
-	int dy = -abs(y2 - y1);
-	int sy = y1 < y2 ? 1 : -1;
+void line(float x1, float y1, float x2, float y2) {
+	float dx = abs(x2 - x1);
+	float sx = x1 < x2 ? 1 : -1;
+	float dy = -abs(y2 - y1);
+	float sy = y1 < y2 ? 1 : -1;
 
-	int e = dx + dy;
+	float e = dx + dy;
 
 	int i = 0;
 
 	while (i++ < 1000) {
 		print_point(x1,y1);
 
-		if (x1 == x2 && y1 == y2)
+		if (abs(x1 - x2) < 0.1 && abs(y1 - y2) < 0.1)
 			break;
 
 		int e2 = e * 2;
@@ -152,8 +152,8 @@ void parse_node(xmlNode* root) {
 			parse_path(node);
 		else if (strcmp(node->name, "polyline") == 0)
 			parse_polyline(node);
-		else
-			printf("Unknown tag: %s\n", node->name);
+		/*else
+			printf("Unknown tag: %s\n", node->name);*/
 
 		parse_node(node->children);
 	}
@@ -356,7 +356,7 @@ void parse_circle(xmlNode* node) {
 
 
 void parse_polygon(xmlNode* node) {
-	int* points = malloc(0);
+	float* points = malloc(0);
 	int points_count = 0;
 
 	xmlAttr* prop = node->properties;
@@ -375,8 +375,8 @@ void parse_polygon(xmlNode* node) {
 					str[len+1] = 0;
 				} else {
 					if (strlen(str) > 0) {
-						points = realloc(points, (++points_count) * sizeof(int));
-						points[points_count-1] = atoi(str) * scale;
+						points = realloc(points, (++points_count) * sizeof(float));
+						points[points_count-1] = atof(str) * scale;
 
 						free(str);
 						str = malloc(1);
@@ -409,7 +409,7 @@ void parse_polygon(xmlNode* node) {
 
 
 void parse_polyline(xmlNode* node) {
-	int* points = malloc(0);
+	float* points = malloc(0);
 	int points_count = 0;
 
 	xmlAttr* prop = node->properties;
@@ -428,8 +428,8 @@ void parse_polyline(xmlNode* node) {
 					str[len+1] = 0;
 				} else {
 					if (strlen(str) > 0) {
-						points = realloc(points, (++points_count) * sizeof(int));
-						points[points_count-1] = atoi(str) * scale;
+						points = realloc(points, (++points_count) * sizeof(float));
+						points[points_count-1] = atof(str) * scale;
 
 						free(str);
 						str = malloc(1);
@@ -460,7 +460,7 @@ void parse_polyline(xmlNode* node) {
 
 
 void parse_path(xmlNode* node) {
-	int* data = malloc(0);
+	float* data = malloc(0);
 	int data_size = 0;
 	char* cmds = malloc(0);
 	int cmds_count = 0;
@@ -486,8 +486,8 @@ void parse_path(xmlNode* node) {
 				str[len+1] = 0;
 			} else {
 				if (strlen(str) > 0) {
-					data = realloc(data, (++data_size) * sizeof(int));
-					data[data_size-1] = (int)atof(str) * scale;
+					data = realloc(data, (++data_size) * sizeof(float));
+					data[data_size-1] = atof(str) * scale;
 
 					free(str);
 					str = malloc(1);
